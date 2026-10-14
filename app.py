@@ -93,7 +93,16 @@ def load_table_counts() -> pd.DataFrame:
     engine = get_engine()
     rows = []
     with engine.connect() as conn:
+        existing = set(
+            conn.execute(text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = DATABASE()"
+            )).scalars()
+        )
         for t in TABLES:
+            if t not in existing:
+                rows.append({"table_name": t, "total_rows": None})
+                continue
             n = conn.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar()
             rows.append({"table_name": t, "total_rows": n})
     return pd.DataFrame(rows)
@@ -127,7 +136,7 @@ if df.empty:
     st.stop()
 
 
-# Header + KPIs
+
 
 st.title("Bike Store Sales Dashboard")
 st.caption("Source: MySQL · bike_store_db · net sales = quantity × list price × (1 − discount)")
@@ -148,13 +157,13 @@ k5.metric("Discounts Given", f"${discount_given:,.0f}", f"{discount_given / gros
 st.divider()
 
 
-# Tabs
+
 
 tab_trend, tab_brand, tab_product, tab_catalog, tab_data = st.tabs(
     ["📈 Sales Trends", "🏷️ Brands & Categories", "🏆 Top Products", "📦 Catalog Pricing", "🗄️ Data Overview"]
 )
 
-# Trends
+
 with tab_trend:
     c1, c2 = st.columns([2, 1])
 
@@ -198,7 +207,7 @@ with tab_trend:
     )
     st.caption("Growth is only meaningful when consecutive years are selected in the sidebar.")
 
-# Brands & categories
+
 with tab_brand:
     c1, c2 = st.columns(2)
 
@@ -226,7 +235,7 @@ with tab_brand:
                      title="Sales Mix: Brand → Category")
     st.plotly_chart(fig, use_container_width=True)
 
-# Top products
+
 with tab_product:
     top_n = st.slider("Number of products", 5, 25, 10)
     metric = st.radio("Rank by", ["Units sold", "Net sales"], horizontal=True)
@@ -254,7 +263,7 @@ with tab_product:
         use_container_width=True, hide_index=True,
     )
 
-#Catalog pricing
+
 with tab_catalog:
     p1, p2, p3, p4 = st.columns(4)
     p1.metric("Total Products", f"{len(products):,}")
@@ -294,12 +303,22 @@ with tab_catalog:
         use_container_width=True, hide_index=True,
     )
 
-# Data overview 
+ 
 with tab_data:
     st.subheader("Row count per table")
     counts = load_table_counts()
+
+    missing = counts.loc[counts["total_rows"].isna(), "table_name"].tolist()
+    if missing:
+        st.warning(
+            "These tables are listed in TABLES but don't exist in the database, "
+            f"so they're excluded: {', '.join(missing)}"
+        )
+
+    known = counts.dropna(subset=["total_rows"]).sort_values("total_rows")
+
     c1, c2 = st.columns([1, 2])
-    c1.dataframe(counts, use_container_width=True, hide_index=True)
-    fig = px.bar(counts.sort_values("total_rows"), x="total_rows", y="table_name",
-                 orientation="h", text_auto=True, labels={"table_name": "", "total_rows": "Rows"})
-    c2.plotly_chart(fig, use_container_width=True)
+    c1.dataframe(known, width="stretch", hide_index=True)
+    fig = px.bar(known, x="total_rows", y="table_name", orientation="h",
+                 text_auto=True, labels={"table_name": "", "total_rows": "Rows"})
+    c2.plotly_chart(fig, width="stretch")
