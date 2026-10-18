@@ -1,7 +1,7 @@
 """
 Bike Store Sales Dashboard
 Run: streamlit run app.py
-iconse been imported from live examples 
+iconse been imported from live examples
 
 """
 
@@ -126,7 +126,7 @@ TABLES = [
 
 
 
-# DATA LOADING multiple df funtion :) 
+# DATA LOADING multiple df funtion :)
 
 
 @st.cache_data(ttl=600)
@@ -172,9 +172,9 @@ def load_table_counts() -> pd.DataFrame:
     engine = get_engine()
     rows = []
 
-    
+
     # Check which tables actually exist before querying them.
-    
+
     with engine.connect() as conn:
         existing_tables = set(
             conn.execute(
@@ -191,10 +191,10 @@ def load_table_counts() -> pd.DataFrame:
                 })
                 continue
 
-            
+
             # Table names come only from the fixed TABLES list.
-            
-            
+
+
             count = conn.execute(
                 text(f"SELECT COUNT(*) FROM `{table_name}`")
             ).scalar_one()
@@ -316,7 +316,7 @@ k5.metric(
 st.divider()
 
 
-# DASHBOARD TABS , the iconse been omported online and as from live example 
+# DASHBOARD TABS , the iconse been omported online and as from live example
 
 tab_trend, tab_brand, tab_product, tab_catalog, tab_data = (
     st.tabs([
@@ -641,7 +641,7 @@ with tab_catalog:
             key="catalog_categories",
         )
 
-    
+
     # IMPORTANT: All Catalog Pricing metrics, charts, and tables must use catalog_filtered instead of products.
 
 
@@ -922,4 +922,3 @@ with tab_data:
         st.info(
             "Verify the database connection and table permissions."
         )
-
